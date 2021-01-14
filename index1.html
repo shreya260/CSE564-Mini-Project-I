@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>D3 Page Template</title>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<link rel="stylesheet" type="text/css" href="css/range.css"></link>
+<link rel="stylesheet" type="text/css" href="css/style.css"></link>
+
+</head>
+<body>
+	<div class="navbar">
+	<h3 style="text-align:center; color: white;" id="id1">CSE 564: MINI PROJECT 1</h3>
+	<h3 style="text-align:center; color: white;" id="id2">ID: 112675992</h3>
+</div>
+    <div><h1 style="text-align: left; color: black"> AMES HOUSING DATASET</h1></div>
+    <div class="form-inline custom-centered">
+            <label for="controlSelection">Select Variable: &emsp; </label>
+            <select class="form-control" id="controlSelection">
+            <option value="">Select a value</option>
+            <option value="MSZoning">MSZoning</option>
+            <option value="YearBuilt">Year Built</option>
+            <option value="SaleCondition">Sale Condition</option>
+            <option value="SalePrice">Sale Price</option>
+            <option value="SaleType">Sale Type</option>
+            <option value="GarageArea">Garage Area</option>
+            <option value="Electrical">Electrical</option>
+            <option value="firstFlrSF">First floor surface area</option>
+            <option value="Foundation">Foundation of the House</option>
+            <option value="GarageType">GarageType</option>
+            <option value="GrLivArea">Ground Living Area</option>
+            <option value="OverallCond">Overall Condition of House</option>
+            <option value="OverallQual">Overall Quality of House</option>
+            <option value="RoofStyle">Roof Style</option>
+            <option value="BsmtQual">Basement Quality</option>
+            <option value="TotRmsAbvGrd">Total Rooms Above Ground</option> 
+            </select>
+
+    </div>
+    <div class="box">
+    <center><div id="value"></div></center>
+  </div>
+  <div class="container">
+    <input type="range" min="1" max="70" value="10" class="slider" id="slider">
+  </div>
+    <script type="text/javascript">
+
+//loading data
+	d3.csv("data/house.csv", function(error, data){
+//Data Preparation
+// Selecting button will record change in selection of variable
+    	d3.select("#controlSelection").on("change", function() {
+    		d3.selectAll('svg').remove(); // remove any old charts
+                column = this.value; // selecting a particular column
+                map = [];
+                // Creating array consisting of all categorical data
+                categorical_data = ["MSZoning", "SaleCondition", "SaleType", "Electrical", "Foundation",
+                "Neighborhood", "GarageType", "RoofStyle", "BsmtQual"]; 
+                if (categorical_data.indexOf(column) != -1) {
+                	// if categorical, then map the values of the column and call function drawBarChart
+                	 for (let index = 0; index < data.length; index++) {
+                        map.push(data[index][column]);
+                    }
+                    drawBarChart(column, map);
+                    
+                } else {
+                	// otherwise map values of column and call drawHistogram
+                    for (let index = 0; index < data.length; index++) {
+                        map.push(parseInt(data[index][column])); // parseInt for  making it into numeric value
+                    }
+                   
+                    drawHistogram(column, map);
+              
+                }
+            });
+//function to draw a bar chart for categorical data
+    	function drawBarChart(column, map){
+    		// setting margins 
+    	var margin = {top: 70, right: 50, bottom: 70, left: 200},
+	width = 900 - margin.left - margin.right,
+	height = 650 - margin.top - margin.bottom;
+// color selection for bars
+	var color = "#2a324b";
+
+// creating svg and assigning it margin 
+	var svg = d3.select("body").append("svg")
+	    .attr("width", width + margin.left + margin.right)
+	    .attr("height", height + margin.top + margin.bottom)
+	  .append("g")
+	  // moving the svg container to where we want to place it
+	    .attr("transform", 
+	          "translate(" + margin.left + "," + margin.top + ")");
+
+	var tip = d3.tip()
+	  	.attr('class', 'd3-tip')
+	  	.offset([-5, 0])
+	svg.call(tip)
+	//selecting built in ordinal function for discrete values i.e categorical data
+    		var x = d3.scale.ordinal().rangeRoundBands([0, width], .5);
+    		//building x-axis using built in function
+    		var xAxis = d3.svg.axis()
+    					.scale(x) // scaling the axis 
+    					.orient("bottom"); // function for positioning axis on the bottom
+    //selecting built in linear function for frequency count on categorical data
+    		var y = d3.scale.linear().range([height, 0]);
+    		//building y-axis using built in function
+			var yAxis = d3.svg.axis()
+				.scale(y) // scaling the axis 
+				.orient("left") // function for positioning axis on the left
+				.ticks(10);
+    		//var map = data.map(function(d) { return d.column; })
+    		var counts = {};
+    		// summing up all values in a particular category
+						for (var i = 0; i < map.length; i++) {
+			    		counts[map[i]] = 1 + (counts[map[i]] || 0);
+								}
+			// creating an array of dictionaries, with all categories & their respective frequency
+						var a = []
+						for (key in counts){
+							a.push({"categories": key, "values": counts[key]})
+						}
+			//console.log(counts);	
+			x.domain(map)// setting domain of x to values in a column
+  // setting domain of y from min (or 0) to max of frequency of values
+			y.domain([0,d3.max(a, function(d) { return d.values; })]);
+			
+			  // creating a colorscale effect, darker for max value and lighter for min value
+		  	var colorScale = d3.scale.linear()
+		        .domain([0,d3.max(a, function(d) { return d.values })])
+		       	.range([d3.rgb(color).brighter(), d3.rgb(color).darker()]);
+
+//Calling xAxis and adding it in the svg
+		    svg.append("g")
+		      .attr("class", "x axis")
+		      .attr("transform", "translate(0," + height + ")")
+		      .call(xAxis) // calls xaxis function
+		      // adds x label
+		    .append("text")
+		        .attr("x", width - 270)
+		        .attr("y", 50)
+		        .attr("dx", ".100em")
+		        .style("text-anchor", "end")
+		        .text(column); 
+//Calling yAxis and adding it in the svg
+		    svg.append("g")
+		      .attr("class", "y axis")
+		      .call(yAxis) // calls yaxis function
+		      // adds y label
+		    .append("text")
+		      .attr("transform", "rotate(-90)")
+		      .attr("y", 6)
+		      .attr("dy", ".71em")
+		      .style("text-anchor", "end")
+		      .text("Total Count");	
+//Plotting bars in the barchart
+		    svg.selectAll("bar")
+		      .data(a)
+		    .enter().append("rect")
+		      .attr("fill", function(d) { return colorScale(d.values) })
+		      .on("mouseover", onMouseOver) 
+		      .on("mouseout", onMouseOut)
+		      .attr("x", function(d){return x(d.categories)})
+		      .attr("width", x.rangeBand())
+		      .attr("y", function(d) { return y(d.values); })
+		      .attr("height", function(d) { return height - y(d.values); })
+
+			function onMouseOver(d){
+			    d3.select(this).style("fill", "#cc3f0c")
+			    .attr('width', x.rangeBand() + 5) //increasing width of the bar
+			    .attr("y", function(d) { return y(d.values) - 10; }) // calculating correct value after increase in height
+			    .attr("height", function(d) { return height - y(d.values) + 10; }) // increasing height
+			        tip.html("<span>"+d.values+"</span>") // display frequency of bar
+			        tip.show()
+			       }
+
+
+			 function onMouseOut(d){
+			 	// Returning bar values to default
+			 	d3.select(this).style("fill",  function(d) { return colorScale(d.values) });
+			        d3.select(this)
+			          .attr('width', x.rangeBand()) // width calculated by inbuilt function
+			          .attr("height", function(d) { return height - y(d.values); }) // calculates final height
+			          .attr("y",function(d) { return y(d.values); }) // accesses frequency and calculates length
+			          tip.hide() // hide frequency of bar
+			 }
+    	}
+
+
+    	function drawHistogram(column, map){
+    			var margin = {top: 70, right: 50, bottom: 70, left: 200},
+	width = 900 - margin.left - margin.right,
+	height = 650 - margin.top - margin.bottom;
+
+	var color = "#2a324b";
+
+	var svg = d3.select("body").append("svg")
+	    .attr("width", width + margin.left + margin.right)
+	    .attr("height", height + margin.top + margin.bottom)
+	  .append("g")
+	    .attr("transform", 
+	          "translate(" + margin.left + "," + margin.top + ")");
+
+	var tip = d3.tip()
+	  	.attr('class', 'd3-tip')
+	  	.offset([-5, 0])
+
+	svg.call(tip)
+
+    		//As we have numerical data, we use linear function for x Axis
+				var x = d3.scale.linear().range([0, width]);
+
+			//building x-axis using built in function
+			var xAxis = d3.svg.axis()
+			    .scale(x) // scaling the axis 
+			    .orient("bottom"); // function for positioning axis on the bottom
+
+			map.sort(function(a, b){return a-b});
+
+			max = d3.max(map) // finds minimum value of the column
+  			min = d3.min(map) // finds maximum value of the column
+			  x.domain([min,max]); //setting domain for x
+			  
+			  bin = 10 // setting default bin value as 10 which we will update later
+
+			  // Using built in histogram function and passing our data to it
+			  var data = d3.layout.histogram()
+			    .bins(x.ticks(bin))
+			    (map);
+
+			  //selecting built in linear function for frequency count on categorical data
+			 var y = d3.scale.linear()
+			 // using min and max value of the length of the segregated bins for setting domain of y
+			          .domain([d3.min(data, function(d) { return d.length }),d3.max(data, function(d) { return d.length })])
+			          .range([height, 0]);
+
+			  // creating a colorscale effect, darker for max value and lighter for min value
+			var colorScale = d3.scale.linear()
+			            .domain([d3.min(data, function(d) { return d.length }),d3.max(data, function(d) { return d.length })])
+			            .range([d3.rgb(color).brighter(), d3.rgb(color).darker()]);
+
+			var yAxis = d3.svg.axis()
+			  .scale(y)
+			  .orient("left") // function for positioning axis on the left
+			  .ticks(10);
+
+			//Calling xAxis and adding it in the svg
+			svg.append("g")
+			      .attr("class", "x axis")
+			      .attr("transform", "translate(0," + height + ")")
+			      .call(xAxis)
+			      .append("text")
+			        .attr("x", width - 270)
+			        .attr("y", 50)
+			        .attr("dx", ".100em")
+			        .style("text-anchor", "end")
+			        .text(column);
+
+				//Calling yAxis and adding it in the svg
+				svg.append("g")
+				      .attr("class", "y axis")
+				      .call(yAxis)
+				    .append("text")
+				      .attr("transform", "rotate(-90)")
+				      .attr("y", 8)
+				      .attr("dy", ".80em")
+				      .style("text-anchor", "end")
+				      .text("Total Count")
+
+				var bar = svg.selectAll("bar")
+				    .data(data)
+				  .enter().append("g")
+				    // moving to the desired position using values of the bins and their respective length 
+				    .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; })
+				    .on("mouseover", onMouseOver)
+				    .on("mouseout", onMouseOut);  
+    // Adding values for the bar of the rectangle
+
+				    bar.append("rect")
+				      .attr("fill", function(d) { return colorScale(d.y) })
+				      // for width, we calculate length of the bin and scale it
+				      .attr("width", (x(data[0].dx) - x(0)))
+				      // calculating height of the bar using length which is d.y
+				      .attr("height", function(d) { return height - y(d.y); });
+
+				function onMouseOver(d){
+			    d3.select(this).select("rect").style("fill", "#cc3f0c")
+			    tip.html("<span>"+d.y+"</span>")
+			        tip.show()
+
+			}
+			    
+			function onMouseOut(d){
+			  d3.select(this).select("rect").style("fill", function(d) { return colorScale(d.y) })
+			  tip.hide()
+			 }
+
+			 function updateChart(bin){
+			old_graph = d3.select('body svg').selectAll('rect'); // removing only bars as the axis remains same
+			old_graph.remove();
+			//Using built in function d3 layout histogram
+			var data = d3.layout.histogram()
+			    .bins(x.ticks(bin))
+			    (map);
+			var y = d3.scale.linear()
+			          .domain([d3.min(data, function(d) { return d.length }),d3.max(data, function(d) { return d.length })])
+			          .range([height, 0]);
+
+			var colorScale = d3.scale.linear()
+			            .domain([d3.min(data, function(d) { return d.length }),d3.max(data, function(d) { return d.length })])
+			            .range([d3.rgb(color).brighter(), d3.rgb(color).darker()]);
+
+			            var bar = svg.selectAll("bar").data(data)
+    		.enter().append("g")
+    		.attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; })
+    		.on("mouseover", onMouseOver)
+    		.on("mouseout", onMouseOut);  
+
+		    bar.append("rect")
+		      .attr("fill", function(d) { return colorScale(d.y) })
+		      .attr("width", (x(data[0].dx) - x(0)) - 1)
+		      .attr("height", function(d) { return height - y(d.y); });
+		}
+
+			 // Listen to the slider
+			  var val = document.getElementById('value'); // storing value of the slider
+			  d3.select("#slider").on("change", function(d){ // notices change in slider
+			    d3.select('.box').selectAll("text").remove() // removes previously selected value 
+			    selectedValue = this.value
+			    //val.innerHTML = this.value;
+			    d3.select(".box").append("text").attr('class','try').text(function (){
+			      return selectedValue; // returns new value
+			    })
+			    updateChart(selectedValue) //returns value to function to update histogram
+
+  				})
+
+
+
+
+				    	}
+    	});
+    </script>
